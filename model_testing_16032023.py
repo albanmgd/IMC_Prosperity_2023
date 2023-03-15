@@ -191,60 +191,56 @@ class Trader:
 
 
     def get_orders_crossed_orderbook(self, symbol, state, current_pos, position_limit):
-        """
-        This method gets the fair price using vwap method and then computes the spread based on our current position.
-        We only trade when in different timestamp, buy price is higher or equal sell price.
-        """
-        print("Both sides of the market are quoted for " + symbol)
-        print("Position on " + symbol + " is: " + str(current_pos))
-        # Initialize the list of Orders to be sent as an empty list
+        """This algorithm is used when the best bid is higher than the best ask, meaning there is no cross"""
         orders: list[Order] = []
         order_depth: OrderDepth = state.order_depths[symbol]
 
-        # Computing the fair value of the asset based on VWAP algo:
-        fair_value_asset = self.get_fair_price_asset(symbol, state)
-        print("The estimated fair price for " + symbol + " is: " + str(fair_value_asset))
+        # Check if there are any crossed orders and that they are from different timestamps
+        if (order_depth.buy_orders and order_depth.sell_orders and
+                order_depth.best_bid >= order_depth.best_ask and
+                self.df_data_market.iloc[-1]['timestamp'] != self.df_data_trades.iloc[-1]['timestamp']):
+            # Find the maximum buy price and the minimum sell price
+            max_buy_price = max(order_depth.buy_orders.keys())
+            min_sell_price = min(order_depth.sell_orders.keys())
 
-        # Computing the spread & fair prices
-        spreads = self.estimate_spreads(symbol, current_pos, position_limit, state)
-        buy_spread = spreads["buy_spread"]
-        sell_spread = spreads["sell_spread"]
-        print("The estimated buy spread for " + symbol + " is: " + str(buy_spread))
-        print("The estimated sell spread for " + symbol + " is: " + str(sell_spread))
+            # If the maximum buy price is greater than or equal to the minimum sell price
+            if max_buy_price >= min_sell_price:
+                # Calculate the fair value using VWAP algorithm
+                fair_value_asset = self.get_fair_price_asset(symbol, state)
 
-        fair_buy_price = fair_value_asset - buy_spread  # Willing to buy lower than my valuation
-        fair_sell_price = fair_value_asset + sell_spread
+                # Compute the spread and fair prices
+                spreads = self.estimate_spreads(symbol, current_pos, position_limit, state)
+                buy_spread = spreads["buy_spread"]
+                sell_spread = spreads["sell_spread"]
+                fair_buy_price = fair_value_asset - buy_spread  # Willing to buy lower than my valuation
+                fair_sell_price = fair_value_asset + sell_spread
 
-        if len(self.df_data_market) > 0:
-            last_timestamp = self.df_data_market.iloc[-1]['timestamp']
-        else:
-            last_timestamp = 0
+                # Get all the buy orders and sell orders at or below the fair buy and sell prices, respectively
+                buy_orders_to_place = [(price, volume) for price, volume in order_depth.sell_orders.items() if price <= fair_buy_price]
+                sell_orders_to_place = [(price, volume) for price, volume in order_depth.buy_orders.items() if price >= fair_sell_price]
 
-        buy_prices = sorted([k for k in order_depth.buy_orders.keys() if k >= fair_sell_price])
-        sell_prices = sorted([k for k in order_depth.sell_orders.keys() if k <= fair_buy_price])
+                # Sort the buy and sell orders based on price-time priority
+                buy_orders_to_place = sorted(buy_orders_to_place, key=lambda x: (x[0], x[1]))
+                sell_orders_to_place = sorted(sell_orders_to_place, key=lambda x: (x[0], x[1]))
 
-        while len(buy_prices) > 0 and len(sell_prices) > 0:
-            buy_price = buy_prices[0]
-            sell_price = sell_prices[0]
-            if last_timestamp != state.timestamp and buy_price >= sell_price:
-                buy_volume = -order_depth.buy_orders[buy_price]
-                sell_volume = -order_depth.sell_orders[sell_price]
-                trade_volume = min(buy_volume, sell_volume)
-                orders.append(Order(symbol, sell_price, trade_volume))
-                orders.append(Order(symbol, buy_price, -trade_volume))
-                print("TRADE " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(trade_volume))
-                last_timestamp = state.timestamp
-
-                if buy_volume == trade_volume:
-                    buy_prices.pop(0)
-                else:
-                    order_depth.buy_orders[buy_price] += trade_volume
-
-                if sell_volume == trade_volume:
-                    sell_prices.pop(0)
-                else:
-                    order_depth.sell_orders[sell_price] += trade_volume
-            else:
-                break
+                # Match the orders based on price-time priority
+                for buy_order in buy_orders_to_place:
+                    for sell_order in sell_orders_to_place:
+                        if buy_order[0] >= sell_order[0]:
+                            trade_volume = min(buy_order[1], sell_order[1])
+                            orders.append(Order(symbol, sell_order[0], -trade_volume))
+                            orders.append(Order(symbol, buy_order[0], trade_volume))
+                            # Remove the matched orders from the lists
+                            buy_orders_to_place.remove(buy_order)
+                            sell_orders_to_place.remove(sell_order)
+                            # If there is still some volume remaining in the buy order, move to the next sell order
+                            if buy_order[1] > trade_volume:
+                                break
+                # Place any remaining buy orders
+                for buy_order in buy_orders_to_place:
+                    orders.append(Order(symbol, buy_order[0], -buy_order[1]))
+                # Place any remaining sell orders
+                for sell_order in sell_orders_to_place:
+                    orders.append(Order(symbol, sell_order[0], sell_order[1]))
 
         return orders
