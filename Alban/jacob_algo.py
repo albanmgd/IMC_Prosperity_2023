@@ -24,7 +24,7 @@ class Trader:
 
             # We look at every buy order in the order book that is higher than any past sell order (since we know
             # current O.B. can't be crossed)
-            if len(order_depth.sell_orders) != 0 and len(self.df_data_market > 0):
+            if len(order_depth.sell_orders) != 0 and len(self.df_data_market) > 0:
                 # We get the appropriate past orders
                 mask_symbol = self.df_data_market["symbol"] == symbol
                 df_past_orders = self.df_data_market[mask_symbol]
