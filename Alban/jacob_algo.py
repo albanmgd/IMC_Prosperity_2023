@@ -29,16 +29,47 @@ class Trader:
                 mask_symbol = self.df_data_market["symbol"] == symbol
                 df_past_orders = self.df_data_market[mask_symbol]
 
+                # First loooking at the most attractive order we can profit from
                 lowest_ask = min(order_depth.sell_orders.keys())
                 volume_lowest_ask = order_depth.sell_orders.get(lowest_ask)
-                mask_opportunities = df_past_orders["best_bid_1"] > lowest_ask
-                df_opportunities = df_past_orders[mask_opportunities]
 
-                # We now have the set of all possible opportunities; we send orders for the most lucratives ones
-                print(df_opportunities)
+                # First looking for the most competitive orders
+                orders_1 = self.get_opportunities_for_price(symbol, df_past_orders, lowest_ask, volume_lowest_ask, 1, "SELL")
+
+                print(orders_1)
 
 
         return result
+
+
+    def get_opportunities_for_price(self, symbol, df_past_orders, price_level, volume_price_level, level_order_book: int, side: str):
+
+        if side == "SELL":
+            price_level_ob = "bid_" + str(level_order_book)
+            volume_level_ob = "vol_bid" + str(level_order_book)
+            mask_opportunities = df_past_orders[price_level_ob] > price_level
+            df_opportunities = df_past_orders[mask_opportunities]
+            if len(df_opportunities) > 0:
+                # Then we send orders by most attractive opportunities
+                buy_order_prices = df_opportunities[price_level_ob].to_list()
+                volume_prices = [max (vol, volume_price_level) for vol in df_opportunities[volume_level_ob].to_list()]
+                orders = self.send_bulk_orders(symbol, buy_order_prices, volume_prices)
+                return orders
+
+
+    def send_bulk_orders(self, symbol, buy_order_prices, volume_prices):
+        orders: list[Order] = []
+        # Both lists have the same length in theory
+        for i in range(0, len(buy_order_prices)):
+            orders.append(Order(symbol, buy_order_prices[i], volume_prices[i]))
+        return orders
+
+
+
+
+
+
+
 
     def store_data_market(self, symbol, state: TradingState):
         # Appends data related to a symbol to the dataframe that stores all the info
