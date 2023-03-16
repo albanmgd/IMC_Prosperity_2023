@@ -35,6 +35,12 @@ class Trader:
 
                 # First looking for the most competitive orders
                 orders_1 = self.get_opportunities_for_price(symbol, df_past_orders, lowest_ask, volume_lowest_ask, 1, "SELL")
+                orders_2 = self.get_opportunities_for_price(symbol, df_past_orders, lowest_ask, volume_lowest_ask, 2, "SELL")
+                orders_3 = self.get_opportunities_for_price(symbol, df_past_orders, lowest_ask, volume_lowest_ask, 3, "SELL")
+
+                orders_4 = self.get_opportunities_for_price(symbol, df_past_orders, lowest_ask, volume_lowest_ask, 1, "BUY")
+                orders_5 = self.get_opportunities_for_price(symbol, df_past_orders, lowest_ask, volume_lowest_ask, 2, "BUY")
+                orders_6 = self.get_opportunities_for_price(symbol, df_past_orders, lowest_ask, volume_lowest_ask, 3, "BUY")
 
                 print(orders_1)
 
@@ -46,22 +52,40 @@ class Trader:
 
         if side == "SELL":
             price_level_ob = "bid_" + str(level_order_book)
-            volume_level_ob = "vol_bid" + str(level_order_book)
+            volume_level_ob = "vol_bid_" + str(level_order_book)
             mask_opportunities = df_past_orders[price_level_ob] > price_level
             df_opportunities = df_past_orders[mask_opportunities]
             if len(df_opportunities) > 0:
                 # Then we send orders by most attractive opportunities
                 buy_order_prices = df_opportunities[price_level_ob].to_list()
                 volume_prices = [max (vol, volume_price_level) for vol in df_opportunities[volume_level_ob].to_list()]
-                orders = self.send_bulk_orders(symbol, buy_order_prices, volume_prices)
+                orders = self.send_bulk_sell_orders(symbol, buy_order_prices, volume_prices)
+                return orders
+        # Shayan: trying to mirror the buy part based on what Alban has done so far
+        if side == "BUY":
+            price_level_ob = "ask_" + str(level_order_book)
+            volume_level_ob = "vol_ask_" + str(level_order_book)
+            mask_opportunities = df_past_orders[price_level_ob] < price_level
+            df_opportunities = df_past_orders[mask_opportunities]
+            if len(df_opportunities) > 0:
+                # Then we send orders by most attractive opportunities
+                sell_order_prices = df_opportunities[price_level_ob].to_list()
+                volume_prices = [min(vol, volume_price_level) for vol in df_opportunities[volume_level_ob].to_list()]
+                orders = self.send_bulk_buy_orders(symbol, sell_order_prices, volume_prices)
                 return orders
 
-
-    def send_bulk_orders(self, symbol, buy_order_prices, volume_prices):
+    def send_bulk_sell_orders(self, symbol, buy_order_prices, volume_prices):
         orders: list[Order] = []
         # Both lists have the same length in theory
         for i in range(0, len(buy_order_prices)):
             orders.append(Order(symbol, buy_order_prices[i], volume_prices[i]))
+        return orders
+
+    def send_bulk_buy_orders(self, symbol, sell_order_prices, volume_prices):
+        orders: list[Order] = []
+        for i in range(0, len(sell_order_prices)):
+            # - because the volumes in sell orders are negative
+            orders.append(Order(symbol, sell_order_prices[i], -volume_prices[i]))
         return orders
 
 
