@@ -41,6 +41,7 @@ class Trader:
                 orders_sell_side = self.get_opps_for_order_book(symbol, current_pos, df_past_orders, order_depth,
                                                                 "SELL")
                 result[symbol] = orders_sell_side
+            return result
 
     def get_opps_for_order_book(self, symbol, current_pos, df_past_orders, order_depth: OrderDepth, side: str):
         orders = []
@@ -52,11 +53,9 @@ class Trader:
             # volume_order_book = sum(order_depth.sell_orders.values)
 
             # Stack the bid columns and reset the index
-            bids = df_past_orders[['bid_1', 'bid_2', 'bid_3']].stack().reset_index(level=1,
-                                                                                                     drop=True)
+            bids = df_past_orders[['bid_1', 'bid_2', 'bid_3']].stack().reset_index(level=1, drop=True)
             # Stack the vol columns and reset the index
-            vols = df_past_orders[['vol_bid_1', 'vol_bid_2', 'vol_bid_3']].stack().reset_index(level=1,
-                                                                                                        drop=True)
+            vols = df_past_orders[['vol_bid_1', 'vol_bid_2', 'vol_bid_3']].stack().reset_index(level=1, drop=True)
             # Create a DataFrame with the stacked bids and vols
             df_stacked = pd.concat([bids, vols], axis=1, keys=['bid', 'vol'])
             # print(df_stacked.head())
@@ -88,11 +87,11 @@ class Trader:
                         current_pos += volume_to_submit
                         # print(price, volume_to_submit)
                         # updating the associated volume available
-                        price_dict[price] = volume - volume_to_submit  # need to be a - since on the sell side r.n.
-                        orders.append({symbol, price, - volume_to_submit})  # and a + here
+                        filtered_dict[price] = volume - volume_to_submit  # need to be a - since on the sell side r.n.
+                        orders.append(Order(symbol, price, - volume_to_submit))  # and a + here
                         total_volume += volume_to_submit
                         # Adding the order to cross the order book at the actual timestamp
-                        orders.append(Order(symbol, price_sell_order, volume_sell_order))
+                        orders.append(Order(symbol, price_sell_order, - volume_sell_order))
                         print("The order for this price are: ")
                         print(orders)
                     # Finally, need to consider if we're crossing the order book
