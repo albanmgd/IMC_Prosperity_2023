@@ -462,7 +462,7 @@ class Trader:
         #                 fair_value_asset = self.get_alternate_sell_price_asset(symbol, state)
         # else:
         fair_value_asset = market_values["average_value"]
-        if symbol == 'PERLS' or symbol == 'BANANAS':
+        if symbol == 'PEARLS' or symbol == 'BANANAS':
             if market_spread < buy_spread:  
                 fair_value_asset = self.get_alternate_buy_price_asset(symbol, state)
             if market_spread < sell_spread:
@@ -548,10 +548,10 @@ class Trader:
         #         sell_volume = -current_pos
         #         orders.append(Order(symbol, sell_price, sell_volume))   
         #         print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-        if symbol == 'PERLS':
+        if symbol == 'PEARLS':
 
-            if (position_limit + current_pos > 5):
-                sell_price = mt.ceil(fair_value_asset) + 1
+            if (-current_pos)/position_limit < 0.75:
+                sell_price = mt.ceil(fair_value_asset)+ mt.ceil(market_spread/3)
                 sell_volume = - mt.floor((position_limit + current_pos)/2)
                 orders.append(Order(symbol, sell_price, sell_volume))
                 print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
@@ -570,9 +570,9 @@ class Trader:
         #         buy_volume = -current_pos
         #         orders.append(Order(symbol, buy_price, buy_volume))   
         #         print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-        if symbol == 'PERLS':
-            if (position_limit - current_pos > 5):
-                buy_price = mt.floor(fair_value_asset) - 1
+        if symbol == 'PEARLS':
+            if (current_pos)/position_limit < 0.75:
+                buy_price = mt.floor(fair_value_asset) - mt.ceil(market_spread/3)
                 buy_volume = mt.floor((position_limit - current_pos)/2)
                 orders.append(Order(symbol, buy_price, buy_volume))
                 print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
