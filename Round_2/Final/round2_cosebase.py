@@ -4,7 +4,7 @@ import numpy as np
 import statistics as stat
 import math as mt
 from datamodel import OrderDepth, TradingState, Order
-
+#hello
 
 class Trader:
     # Limits for each product
