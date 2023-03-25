@@ -471,8 +471,8 @@ class Trader:
         fair_buy_price = fair_value_asset - market_spread / 2  # Willing to buy lower than my valuation
         fair_sell_price = fair_value_asset + market_spread / 2
 
-        lower_limit = 1.87188
-        upper_limit = 1.88119
+        lower_limit = 1.8717
+        upper_limit = 1.8814
         sigma = 0.001
         fair_limit = 1.87637
         inner_upper_limit = fair_limit + sigma
@@ -501,8 +501,8 @@ class Trader:
             ratio = PC_value/COCO_value
             self.ratio_history.append(ratio)
             print(ratio)
-            old_ratio_max = max(self.ratio_history[-6:])
-            old_ratio_min = min(self.ratio_history[-6:])
+            old_ratio_max = max(self.ratio_history[-5:])
+            old_ratio_min = min(self.ratio_history[-5:])
             print(old_ratio_max)
             print(old_ratio_min)
 
@@ -531,20 +531,20 @@ class Trader:
             elif inner_upper_limit > (PC_value/COCO_value) > inner_lower_limit:
                 if current_pos > 0:
                     sell_price = max(order_depth.buy_orders.keys())+1
-                    sell_volume = -current_pos#* (1.87294-PC_value/COCO_value)/0.003696
+                    sell_volume = -current_pos + round(current_pos/8)#* (1.87294-PC_value/COCO_value)/0.003696
                     orders.append(Order(symbol, sell_price, sell_volume))
                     print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
                     sell_price = max(order_depth.buy_orders.keys())
-                    sell_volume = -current_pos/8#* (1.87294-PC_value/COCO_value)/0.003696
+                    sell_volume = -round(current_pos/8)#* (1.87294-PC_value/COCO_value)/0.003696
                     orders.append(Order(symbol, sell_price, sell_volume))
                     print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))        
                 if current_pos < 0:
                     buy_price = min(order_depth.sell_orders.keys())-1
-                    buy_volume = -current_pos
+                    buy_volume = -current_pos + round(current_pos/8)
                     orders.append(Order(symbol, buy_price, buy_volume))
                     print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
                     buy_price = min(order_depth.sell_orders.keys())
-                    buy_volume = -current_pos/8
+                    buy_volume = -round(current_pos/8)
                     orders.append(Order(symbol, buy_price, buy_volume))
                     print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
 
@@ -573,8 +573,8 @@ class Trader:
             best_PC_ask_vol = PC_values["best_ask_vol"]
             ratio = PC_value/COCO_value
             self.ratio_history.append(ratio)
-            old_ratio_max = max(self.ratio_history[-6:])
-            old_ratio_min = min(self.ratio_history[-6:])
+            old_ratio_max = max(self.ratio_history[-5:])
+            old_ratio_min = min(self.ratio_history[-5:])
             print(ratio)
             print(old_ratio_max)
             print(old_ratio_min)
