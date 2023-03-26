@@ -1,4 +1,4 @@
-# IMC Prosperity 
+# IMC Prosperity 20/03 - 30/03/2023
 
 Repo to share our views, ideas and much more on algos related to the Prosperity challenge ! 
 # System and Support
