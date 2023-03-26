@@ -13,35 +13,36 @@ class Trader:
     # df_data_trades = pd.DataFrame()
     # Logging performed trades
     df_data_trades = pd.DataFrame()
-    ratio_history=[]
-    
-    # Defining the position limits
-    limits = {"PEARLS": 20, "BANANAS": 20,"COCONUTS": 600, "PINA_COLADAS": 300}
 
+    # Defining the position limits
+    limits = {"PEARLS": 20, "BANANAS": 20,"COCONUTS": 600, "PINA_COLADAS": 300, "DIVING_GEAR" :50, "BERRIES" : 250}
+
+    
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
         """"""
         # Initialize the method output dict as an empty dict
         result = {}
 
-
         # Looping through all the symbols
         for symbol in state.listings.keys():
-            if symbol != "DOLPHIN_SIGHTINGS":
-                orders: list[Order] = []
-                # Add the data for this symbol
-                # self.store_data_market(symbol, state)
+            if symbol == "DOLPHIN_SIGHTINGS":
+                continue
+            orders: list[Order] = []
+            # Add the data for this symbol
+            # self.store_data_market(symbol, state)
 
-                # Add the previous trades we did
-                #self.store_data_position(symbol, state)
-                
-                # Add the previous market trades
-                # self.store_data_position(symbol, state)
+            # Add the previous trades we did
+            #self.store_data_position(symbol, state)
+            
+            # Add the previous market trades
+            # self.store_data_position(symbol, state)
 
-                # Retrieve the Order Depth containing all the market BUY and SELL orders for the symbol
-                order_depth: OrderDepth = state.order_depths[symbol]
+            # Retrieve the Order Depth containing all the market BUY and SELL orders for the symbol
+            order_depth: OrderDepth = state.order_depths[symbol]
 
-                # Getting the position limit for this product & our position
-                position_limit = self.limits.get(symbol)
+            # Getting the position limit for this product & our position
+            position_limit = self.limits.get(symbol)
+            if symbol == "BANANAS":
                 if symbol in state.position.keys():
                     current_pos = state.position[symbol]
                 else:
@@ -50,12 +51,10 @@ class Trader:
                 # First we see if both sides of the market are quoted
                 if (len(order_depth.sell_orders) > 0) and (len(order_depth.buy_orders) > 0):
                     orders = self.get_orders_both_sides_quoted(symbol, state, current_pos, position_limit)
-                
-                #if symbol != "COCONUTS" and symbol != "PINA_COLADAS":
                 orders = self.trim_orders(symbol, state, orders)
 
-                # Add all the above orders to the result dict
-                result[symbol] = orders
+            # Add all the above orders to the result dict
+            result[symbol] = orders
 
         return result
 
@@ -101,18 +100,16 @@ class Trader:
                         buys.pop(0)
 
             # but how about fitting the order? :)
-            if symbol != "COCONUTS" and symbol != "PINA_COLADAS":
-
-                if buy_surplus < 0:
-                    print("We have room to grow on buy side", symbol, "Position is", position, "we want to buy", sum_buy)
-                    # fit buy orders to limits
-                    # increment every buy order volume 1 by 1 until we reach limit
-                    # we don't necessarily have to sort them now, we can experiment with it later
-                    #buys.sort(key=lambda x: x.price)
-                    for buy in buys:
-                        if buy_surplus < 0:
-                            buy.quantity = buy.quantity + int((-buy_surplus)/len(buys))
-                            buy_surplus += int((-buy_surplus)/len(buys))
+            if buy_surplus < 0:
+                print("We have room to grow on buy side", symbol, "Position is", position, "we want to buy", sum_buy)
+                # fit buy orders to limits
+                # increment every buy order volume 1 by 1 until we reach limit
+                # we don't necessarily have to sort them now, we can experiment with it later
+                #buys.sort(key=lambda x: x.price)
+                for buy in buys:
+                    if buy_surplus < 0:
+                        buy.quantity = buy.quantity + int((-buy_surplus)/len(buys))
+                        buy_surplus += int((-buy_surplus)/len(buys))
 
         # if there are sell orders, lets check if there is any surplus
         if sells:
@@ -134,22 +131,19 @@ class Trader:
                         sells.pop(0)
 
             # how about fitting the order? :)
-            if symbol != "COCONUTS" and symbol != "PINA_COLADAS":
-
-                if sell_surplus < 0:
-                    print("We have room to grow on sell side", symbol, "Position is", position, "we want to sell", sum_sell)
-                    #sells.sort(key=lambda x: x.price)
-                    for sell in sells:
-                        if sell_surplus < 0:
-                            sell.quantity = sell.quantity - int((-sell_surplus)/len(sells))
-                            sell_surplus += int((-sell_surplus)/len(sells))
+            if sell_surplus < 0:
+                print("We have room to grow on sell side", symbol, "Position is", position, "we want to sell", sum_sell)
+                #sells.sort(key=lambda x: x.price)
+                for sell in sells:
+                    if sell_surplus < 0:
+                        sell.quantity = sell.quantity - int((-sell_surplus)/len(sells))
+                        sell_surplus += int((-sell_surplus)/len(sells))
 
 
         # now we have buys and sells that are trimmed. We combine them in a list and return it
         result = buys + sells
         self.print_orders(result)
         return result
-
 
 
     def store_data_market(self, symbol, state: TradingState):
@@ -285,7 +279,6 @@ class Trader:
                 print(self.df_data_trades.tail())
 
 
-
     def store_data_position(self, symbol: str, state: TradingState):
         # Goal of this method is to store each trade we make. Since we have the data of the trades we make at the
         # previous timestamps, there will always be a one-period lag
@@ -328,14 +321,6 @@ class Trader:
                 print(self.df_data_trades.tail())
 
     @staticmethod
-    # def get_fair_price_asset(symbol, state):
-    #     order_depth: OrderDepth = state.order_depths[symbol]
-
-    #     vwap = (sum([k * v for k, v in order_depth.buy_orders.items()])
-    #             + sum([abs(k) * abs(v) for k, v in order_depth.sell_orders.items()])) \
-    #            / (sum(order_depth.buy_orders.values()) - sum(order_depth.sell_orders.values()))
-
-    #     return vwap
 
     def get_fair_price_asset(symbol, state):
         order_depth: OrderDepth = state.order_depths[symbol]
@@ -378,18 +363,6 @@ class Trader:
         alternate_sell_value = vwap
 
         return alternate_sell_value
-    
-    @staticmethod
-    def get_mid_price(symbol, state):
-        order_depth = state.order_depths[symbol]
-
-        # First step: estimating the spread only if both sides present in the order book
-        mid_price = (min(order_depth.sell_orders.keys()) + max(order_depth.buy_orders.keys()))/2
-        best_bid = max(order_depth.buy_orders.keys())
-        best_bid_vol = order_depth.buy_orders[best_bid]
-        best_ask = min(order_depth.sell_orders.keys())
-        best_ask_vol = order_depth.sell_orders[best_ask]
-        return {"mid_price": mid_price, "best_bid": best_bid, "best_ask_vol": best_ask_vol, "best_ask": best_ask, "best_bid_vol": best_bid_vol}
 
     @staticmethod
     def estimate_spreads(symbol, current_pos, position_limit, state):
@@ -400,7 +373,6 @@ class Trader:
             spread_market = min(order_depth.sell_orders.keys()) - max(order_depth.buy_orders.keys())
             buy_spread = max(order_depth.buy_orders.keys()) - min(order_depth.buy_orders.keys())
             sell_spread = max(order_depth.sell_orders.keys()) - min(order_depth.sell_orders.keys())
-
 
         # This tried to take into account our current position into the equation for what to offer - Will revisit this later after testing a bit
         # spread_buy_side = spread_market / 2
@@ -428,33 +400,12 @@ class Trader:
         sell_spread = max(order_depth.sell_orders.keys()) - min(order_depth.sell_orders.keys())
         market_values = self.get_fair_price_asset(symbol, state)
         market_spread = market_values["average_spread"]
-
-        # mask_symbol = self.df_data_market["symbol"] == symbol
-        # df_symbol = self.df_data_market[mask_symbol]  
-
-        # if len(df_symbol) >= 10:   
-        #     current_mean = df_symbol['vwap_mean'].tail(1)
-        #     current_mean = current_mean.values[0]
-        #     print(current_mean)
-        #     highest_mean = df_symbol['vwap_mean'].tail(10).max()
-        #     print(highest_mean)
-        #     lowest_mean = df_symbol['vwap_mean'].tail(10).min()
-        #     if highest_mean > current_mean and current_mean> lowest_mean:            
-        #         fair_value_asset = current_mean
-        #     else:
-        #         fair_value_asset = market_values["average_value"]
-        #         if market_spread < buy_spread:
-        #                 fair_value_asset = self.get_alternate_buy_price_asset(symbol, state)
-        #         if market_spread < sell_spread:
-        #                 fair_value_asset = self.get_alternate_sell_price_asset(symbol, state)
-        # else:
         fair_value_asset = market_values["average_value"]
         if market_spread < buy_spread:
             fair_value_asset = self.get_alternate_buy_price_asset(symbol, state)
         if market_spread < sell_spread:
             fair_value_asset = self.get_alternate_sell_price_asset(symbol, state)
 
-                
 
         print("The estimated fair price for " + symbol + " is: " + str(fair_value_asset))
 
@@ -463,208 +414,25 @@ class Trader:
         buy_spread = spreads["buy_spread"]
         sell_spread = spreads["sell_spread"]
         market_spread = spreads["spread_market"]
-        print("The estimated buy spread for " + symbol + " is: " + str(buy_spread))
-        print("The estimated sell spread for " + symbol + " is: " + str(sell_spread))
+        
 
         # Estimating a profit range limits
 
         fair_buy_price = fair_value_asset - market_spread / 2  # Willing to buy lower than my valuation
         fair_sell_price = fair_value_asset + market_spread / 2
 
-        lower_limit = 1.8717
-        upper_limit = 1.8814
-        sigma = 0.001
-        fair_limit = 1.87637
-        inner_upper_limit = fair_limit + sigma
-        inner_lower_limit = fair_limit - sigma
-        
-
-
-        if symbol == "COCONUTS":
-            # PC_value = self.get_fair_price_asset("PINA_COLADAS",state)
-            # PC_value = PC_value["average_value"]
-
-            # COCO_value = self.get_fair_price_asset("COCONUTS",state)
-            # COCO_value = COCO_value["average_value"]
-            COCO_values = self.get_mid_price("COCONUTS",state)
-            COCO_value = COCO_values["mid_price"]
-            best_COCO_bid = COCO_values["best_bid"]
-            best_COCO_ask = COCO_values["best_ask"]
-            best_COCO_bid_vol = COCO_values["best_bid_vol"]
-            best_COCO_ask_vol = COCO_values["best_ask_vol"]
-            PC_values = self.get_mid_price("PINA_COLADAS",state)
-            PC_value = PC_values["mid_price"]
-            best_PC_bid = PC_values["best_bid"]
-            best_PC_ask = PC_values["best_ask"]
-            best_PC_bid_vol = PC_values["best_bid_vol"]
-            best_PC_ask_vol = PC_values["best_ask_vol"]
-            ratio = PC_value/COCO_value
-            self.ratio_history.append(ratio)
-            print(ratio)
-            old_ratio_max = max(self.ratio_history[-5:])
-            old_ratio_min = min(self.ratio_history[-5:])
-            print(old_ratio_max)
-            print(old_ratio_min)
-
-
-
-
-            if (PC_value/COCO_value) > upper_limit and old_ratio_min == ratio:
-                #Then we want to sell PC and buy COCO
-                buy_price = best_COCO_ask
-                buy_volume = min(-best_COCO_ask_vol,round(best_PC_bid_vol*fair_limit))
+        total_volume_buy = 0
+        total_volume_buy = sum(
+            value for key, value in order_depth.sell_orders.items() if key < fair_buy_price)
+        buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if
+                               key < fair_buy_price]
+        if total_volume_buy != 0:
+            print(str(len(buy_orders_to_place)) + " buy orders to place:")
+            for buy_order_to_place in buy_orders_to_place:
+                buy_price = buy_order_to_place[0]
+                buy_volume = - buy_order_to_place[1]
                 orders.append(Order(symbol, buy_price, buy_volume))
                 print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-                # COCO_value = COCO_value / 1.8764 *(PC_value/COCO_value)
-            elif (PC_value/COCO_value) < lower_limit and old_ratio_max == ratio:
-                #Because the spread is always thin we just buy the best offer
-                #on the market and even double the volume depending on hwo large the overhaul is
-
-                sell_price = best_COCO_bid
-                sell_volume = -min(best_COCO_bid_vol,-round(best_PC_ask_vol*fair_limit)) #making sure the position is balanced
-                orders.append(Order(symbol, sell_price, sell_volume))
-                print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-
-                # COCO_value = COCO_value /1.8764*(PC_value/COCO_value)
-                #Then we want to sell COCO and buy PC
-            elif inner_upper_limit > (PC_value/COCO_value) > inner_lower_limit:
-                if current_pos > 0:
-                    sell_price = max(order_depth.buy_orders.keys())+1
-                    sell_volume = -current_pos + round(current_pos/8)#* (1.87294-PC_value/COCO_value)/0.003696
-                    orders.append(Order(symbol, sell_price, sell_volume))
-                    print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-                    sell_price = max(order_depth.buy_orders.keys())
-                    sell_volume = -round(current_pos/8)#* (1.87294-PC_value/COCO_value)/0.003696
-                    orders.append(Order(symbol, sell_price, sell_volume))
-                    print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))        
-                if current_pos < 0:
-                    buy_price = min(order_depth.sell_orders.keys())-1
-                    buy_volume = -current_pos + round(current_pos/8)
-                    orders.append(Order(symbol, buy_price, buy_volume))
-                    print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-                    buy_price = min(order_depth.sell_orders.keys())
-                    buy_volume = -round(current_pos/8)
-                    orders.append(Order(symbol, buy_price, buy_volume))
-                    print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-
-            
-        print("The estimated fair price for " + symbol + " is: " + str(fair_value_asset))
-
-        if symbol == "PINA_COLADAS":
-            # PC_value = self.get_fair_price_asset("PINA_COLADAS",state)
-            # PC_value = PC_value["average_value"]
-            # COCO_value = self.get_fair_price_asset("COCONUTS",state)
-            # COCO_value = COCO_value["average_value"]
-            # COCO_value = self.get_mid_price("COCONUTS",state)
-            # PC_value = self.get_mid_price("PINA_COLADAS",state)
-            COCO_values = self.get_mid_price("COCONUTS",state)
-            COCO_value = COCO_values["mid_price"]
-            best_COCO_bid = COCO_values["best_bid"]
-            best_COCO_ask = COCO_values["best_ask"]
-            best_COCO_bid_vol = COCO_values["best_bid_vol"]
-            best_COCO_ask_vol = COCO_values["best_ask_vol"]
-            PC_values = self.get_mid_price("PINA_COLADAS",state)
-            PC_value = PC_values["mid_price"]
-            best_PC_bid = PC_values["best_bid"]
-            best_PC_ask = PC_values["best_ask"]
-            best_PC_bid_vol = PC_values["best_bid_vol"]
-            best_PC_ask_vol = PC_values["best_ask_vol"]
-            ratio = PC_value/COCO_value
-            self.ratio_history.append(ratio)
-            old_ratio_max = max(self.ratio_history[-5:])
-            old_ratio_min = min(self.ratio_history[-5:])
-            print(ratio)
-            print(old_ratio_max)
-            print(old_ratio_min)
-
-
-
-            if PC_value/COCO_value > upper_limit and old_ratio_min == ratio:
-                sell_price = best_PC_bid
-                sell_volume =  -min(best_PC_bid_vol, round(-best_COCO_ask_vol/fair_limit)) #* (1.87294-PC_value/COCO_value)/0.003696
-                orders.append(Order(symbol, sell_price, sell_volume))
-                print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-                
-
-                # COCO_value = COCO_value / 1.8764 *(PC_value/COCO_value)
-            elif PC_value/COCO_value < lower_limit and old_ratio_max == ratio:
-                #Because the spread is always thin we just buy the best offer
-                #on the market and even double the volume depending on hwo large the overhaul is
-
-                #Then we want to sell PC and buy COCO
-                buy_price = best_PC_ask
-                buy_volume = min(-best_PC_ask_vol, round(best_COCO_bid_vol/fair_limit)) 
-                orders.append(Order(symbol, buy_price, buy_volume))
-                print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-            elif inner_upper_limit > (PC_value/COCO_value) > inner_lower_limit:
-                if current_pos > 0:
-                    sell_price = max(order_depth.buy_orders.keys())+1
-                    sell_volume = -current_pos#* (1.87294-PC_value/COCO_value)/0.003696
-                    orders.append(Order(symbol, sell_price, sell_volume))
-                    print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-                    sell_price = max(order_depth.buy_orders.keys())
-                    sell_volume = -current_pos/8#* (1.87294-PC_value/COCO_value)/0.003696
-                    orders.append(Order(symbol, sell_price, sell_volume))
-                    print("SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-                if current_pos < 0:
-                    buy_price = min(order_depth.sell_orders.keys())
-                    buy_volume = -current_pos/8
-                    orders.append(Order(symbol, buy_price, buy_volume))
-                    print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-                    buy_price = min(order_depth.sell_orders.keys())-1
-                    buy_volume = -current_pos
-                    orders.append(Order(symbol, buy_price, buy_volume))
-                    print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-            # else:
-            #     fair_value_asset = (max(order_depth.buy_orders.keys()) + min(order_depth.sell_orders.keys()))/2
-
-            #     total_volume_sell = 0
-            #     total_volume_sell = sum(
-            #         value for key, value in order_depth.buy_orders.items() if key > fair_sell_price)
-            #     sell_orders_to_place = [(key, value) for key, value in order_depth.buy_orders.items() if
-            #                             key > fair_sell_price]
-            #     if total_volume_sell != 0:
-            #         print(str(len(sell_orders_to_place)) + " sell orders to place:")
-            #         for sell_order_to_place in sell_orders_to_place:
-            #             price = sell_order_to_place[0]
-            #             volume = - sell_order_to_place[1]
-            #             orders.append(Order(symbol, price, volume))
-            #             print("SELL " + str(symbol) + " price: ", str(price) + " volume: ", str(volume))
-
-
-                # total_volume_buy = 0
-                # total_volume_buy = sum(
-                #     value for key, value in order_depth.sell_orders.items() if key < fair_buy_price)
-                # buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if
-                #                     key < fair_buy_price]    
-                # if total_volume_buy != 0:
-                #     print(str(len(buy_orders_to_place)) + " buy orders to place:")
-                #     for buy_order_to_place in buy_orders_to_place:
-                #         buy_price = buy_order_to_place[0]
-                #         buy_volume = - buy_order_to_place[1]
-                #         orders.append(Order(symbol, buy_price, buy_volume))
-                #         print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-        print("The estimated fair price for " + symbol + " is: " + str(fair_value_asset))    
-            
-        if symbol == 'PEARLS' or symbol == 'BANANAS':
-
-            total_volume_buy = 0
-            total_volume_buy = sum(
-                value for key, value in order_depth.sell_orders.items() if key < fair_buy_price)
-            buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if
-                                key < fair_buy_price]
-            if total_volume_buy != 0:
-                print(str(len(buy_orders_to_place)) + " buy orders to place:")
-                for buy_order_to_place in buy_orders_to_place:
-                    buy_price = buy_order_to_place[0]
-                    buy_volume = - buy_order_to_place[1]
-                    orders.append(Order(symbol, buy_price, buy_volume))
-                    print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-            
 
         # Trying to account for outliers
         # if sell_spread > market_spread:
@@ -681,19 +449,18 @@ class Trader:
         #         buy_price = max(buy_orders_to_place[0])
         #         buy_volume = - mt.floor((position_limit - current_pos)/4)
         #         orders.append(Order(symbol, buy_price, buy_volume))
-        if symbol == 'PEARLS' or symbol == 'BANANAS':
 
-            total_volume_sell = sum(
-                value for key, value in order_depth.buy_orders.items() if key > fair_sell_price)
-            sell_orders_to_place = [(key, value) for key, value in order_depth.buy_orders.items() if
-                                    key > fair_sell_price]
-            if total_volume_sell != 0:
-                print(str(len(sell_orders_to_place)) + " sell orders to place:")
-                for sell_order_to_place in sell_orders_to_place:
-                    price = sell_order_to_place[0]
-                    volume = - sell_order_to_place[1]
-                    orders.append(Order(symbol, price, volume))
-                    print("SELL " + str(symbol) + " price: ", str(price) + " volume: ", str(volume))
+        total_volume_sell = sum(
+            value for key, value in order_depth.buy_orders.items() if key > fair_sell_price)
+        sell_orders_to_place = [(key, value) for key, value in order_depth.buy_orders.items() if
+                                key > fair_sell_price]
+        if total_volume_sell != 0:
+            print(str(len(sell_orders_to_place)) + " sell orders to place:")
+            for sell_order_to_place in sell_orders_to_place:
+                price = sell_order_to_place[0]
+                volume = - sell_order_to_place[1]
+                orders.append(Order(symbol, price, volume))
+                print("SELL " + str(symbol) + " price: ", str(price) + " volume: ", str(volume))
 
         # if buy_spread > market_spread:
         #     total_volume_sell = sum(
@@ -715,19 +482,20 @@ class Trader:
         #         sell_volume = -current_pos
         #         orders.append(Order(symbol, sell_price, sell_volume))   
         #         print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-        if symbol == 'PEARLS':
+        
+        # if (-current_pos)/position_limit < 0.75 and market_spread > 2:
+        #     sell_price = mt.ceil(fair_value_asset)+ mt.ceil(market_spread/3)
+        #     sell_volume = - mt.floor((position_limit + current_pos)/6)
+        #     orders.append(Order(symbol, sell_price, sell_volume))
+        #     print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
 
-            if (-current_pos)/position_limit < 0.75:
-                sell_price = mt.ceil(fair_value_asset)+ 1
-                sell_volume = - mt.floor((position_limit + current_pos)/2)
-                orders.append(Order(symbol, sell_price, sell_volume))
-                print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-        elif symbol == 'BANANAS':
-            if (-current_pos)/position_limit < 0.75 and market_spread > 2:
-                sell_price = mt.ceil(fair_value_asset)+ mt.ceil(market_spread/3)
-                sell_volume = - mt.floor((position_limit + current_pos)/6)
-                orders.append(Order(symbol, sell_price, sell_volume))
-                print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
+        if (position_limit + current_pos > 5):
+            sell_price = mt.ceil(fair_value_asset) + 1
+            sell_volume = - mt.floor((position_limit + current_pos))
+            orders.append(Order(symbol, sell_price, sell_volume))
+            print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
+        
+
             # sell_price = mt.ceil(fair_value_asset) + 2
             # sell_volume = - mt.floor((position_limit + current_pos)/8)
             # orders.append(Order(symbol, sell_price, sell_volume))
@@ -737,20 +505,33 @@ class Trader:
         #         buy_volume = -current_pos
         #         orders.append(Order(symbol, buy_price, buy_volume))   
         #         print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-        if symbol == 'PEARLS':
-            if (current_pos)/position_limit < 0.75:
-                buy_price = mt.floor(fair_value_asset) - 1
-                buy_volume = mt.floor((position_limit - current_pos)/2)
-                orders.append(Order(symbol, buy_price, buy_volume))
-                print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
+        
     
-        elif symbol == 'BANANAS':
-            if (current_pos)/position_limit < 0.75 and market_spread > 2:
-                buy_price = mt.floor(fair_value_asset) - mt.ceil(market_spread/3)
-                buy_volume = mt.floor((position_limit - current_pos)/6)
-                orders.append(Order(symbol, buy_price, buy_volume))
-                print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
+        if (current_pos)/position_limit < 0.75 and market_spread > 2:
+            buy_price = mt.floor(fair_value_asset) - mt.ceil(market_spread/3)
+            buy_volume = mt.floor((position_limit - current_pos)/6)
+            orders.append(Order(symbol, buy_price, buy_volume))
+            print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
     
+        if total_volume_sell== 0 and abs(-current_pos)/position_limit < 0.75:
+            sell_price = mt.ceil(fair_value_asset) + 1
+            sell_volume = - mt.floor((position_limit + current_pos)/4)
+            orders.append(Order(symbol, sell_price, sell_volume))
+            print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
+                # sell_price = mt.ceil(fair_value_asset) + 2
+                # sell_volume = - mt.floor((position_limit + current_pos)/8)
+                # orders.append(Order(symbol, sell_price, sell_volume))
+                # print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
+            # if total_volume_buy == 0 and current_pos < 0:
+            #         buy_price = mt.floor(fair_value_asset)
+            #         buy_volume = -current_pos
+            #         orders.append(Order(symbol, buy_price, buy_volume))   
+            #         print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
+        if total_volume_buy == 0 and (current_pos)/position_limit < 0.75:
+            buy_price = mt.floor(fair_value_asset) - 1
+            buy_volume = mt.floor((position_limit - current_pos)/4)
+            orders.append(Order(symbol, buy_price, buy_volume))
+            print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
             # buy_price = mt.floor(fair_value_asset) - 2
             # buy_volume = mt.floor((position_limit-current_pos)/8)
             # orders.append(Order(symbol, buy_price, buy_volume))

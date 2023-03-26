@@ -13,13 +13,11 @@ class Trader:
     # df_data_trades = pd.DataFrame()
     # Logging performed trades
     df_data_trades = pd.DataFrame()
-    dolphin_sightings_history = []
-    dolphin_change_history=[]
-    Gear_price_history=[]
 
     # Defining the position limits
-    limits = {"PEARLS": 20, "BANANAS": 20,"COCONUTS": 600, "PINA_COLADAS": 300, "DIVING_GEAR": 50}
+    limits = {"PEARLS": 20, "BANANAS": 20,"COCONUTS": 600, "PINA_COLADAS": 300, "DIVING_GEAR" :50, "BERRIES" : 250}
 
+    
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
         """"""
         # Initialize the method output dict as an empty dict
@@ -27,23 +25,24 @@ class Trader:
 
         # Looping through all the symbols
         for symbol in state.listings.keys():
-            if symbol == "DIVING_GEAR":
+            if symbol == "DOLPHIN_SIGHTINGS":
+                continue
+            orders: list[Order] = []
+            # Add the data for this symbol
+            # self.store_data_market(symbol, state)
 
-                orders: list[Order] = []
-                # Add the data for this symbol
-                # self.store_data_market(symbol, state)
+            # Add the previous trades we did
+            #self.store_data_position(symbol, state)
+            
+            # Add the previous market trades
+            # self.store_data_position(symbol, state)
 
-                # Add the previous trades we did
-                #self.store_data_position(symbol, state)
-                
-                # Add the previous market trades
-                # self.store_data_position(symbol, state)
+            # Retrieve the Order Depth containing all the market BUY and SELL orders for the symbol
+            order_depth: OrderDepth = state.order_depths[symbol]
 
-                # Retrieve the Order Depth containing all the market BUY and SELL orders for the symbol
-                order_depth: OrderDepth = state.order_depths[symbol]
-
-                # Getting the position limit for this product & our position
-                position_limit = self.limits.get(symbol)
+            # Getting the position limit for this product & our position
+            position_limit = self.limits.get(symbol)
+            if symbol == "BANANAS" or symbol == "PEARLS":
                 if symbol in state.position.keys():
                     current_pos = state.position[symbol]
                 else:
@@ -52,11 +51,10 @@ class Trader:
                 # First we see if both sides of the market are quoted
                 if (len(order_depth.sell_orders) > 0) and (len(order_depth.buy_orders) > 0):
                     orders = self.get_orders_both_sides_quoted(symbol, state, current_pos, position_limit)
-
                 orders = self.trim_orders(symbol, state, orders)
 
-                # Add all the above orders to the result dict
-                result[symbol] = orders
+            # Add all the above orders to the result dict
+            result[symbol] = orders
 
         return result
 
@@ -146,7 +144,6 @@ class Trader:
         result = buys + sells
         self.print_orders(result)
         return result
-
 
 
     def store_data_market(self, symbol, state: TradingState):
@@ -282,7 +279,6 @@ class Trader:
                 print(self.df_data_trades.tail())
 
 
-
     def store_data_position(self, symbol: str, state: TradingState):
         # Goal of this method is to store each trade we make. Since we have the data of the trades we make at the
         # previous timestamps, there will always be a one-period lag
@@ -325,14 +321,6 @@ class Trader:
                 print(self.df_data_trades.tail())
 
     @staticmethod
-    # def get_fair_price_asset(symbol, state):
-    #     order_depth: OrderDepth = state.order_depths[symbol]
-
-    #     vwap = (sum([k * v for k, v in order_depth.buy_orders.items()])
-    #             + sum([abs(k) * abs(v) for k, v in order_depth.sell_orders.items()])) \
-    #            / (sum(order_depth.buy_orders.values()) - sum(order_depth.sell_orders.values()))
-
-    #     return vwap
 
     def get_fair_price_asset(symbol, state):
         order_depth: OrderDepth = state.order_depths[symbol]
@@ -377,18 +365,6 @@ class Trader:
         return alternate_sell_value
 
     @staticmethod
-    def get_mid_price(symbol, state):
-        order_depth = state.order_depths[symbol]
-
-        # First step: estimating the spread only if both sides present in the order book
-        mid_price = (min(order_depth.sell_orders.keys()) + max(order_depth.buy_orders.keys()))/2
-        best_bid = max(order_depth.buy_orders.keys())
-        best_bid_vol = order_depth.buy_orders[best_bid]
-        best_ask = min(order_depth.sell_orders.keys())
-        best_ask_vol = order_depth.sell_orders[best_ask]
-        return {"mid_price": mid_price, "best_bid": best_bid, "best_ask_vol": best_ask_vol, "best_ask": best_ask, "best_bid_vol": best_bid_vol}
-
-    @staticmethod
     def estimate_spreads(symbol, current_pos, position_limit, state):
         order_depth = state.order_depths[symbol]
 
@@ -397,7 +373,6 @@ class Trader:
             spread_market = min(order_depth.sell_orders.keys()) - max(order_depth.buy_orders.keys())
             buy_spread = max(order_depth.buy_orders.keys()) - min(order_depth.buy_orders.keys())
             sell_spread = max(order_depth.sell_orders.keys()) - min(order_depth.sell_orders.keys())
-
 
         # This tried to take into account our current position into the equation for what to offer - Will revisit this later after testing a bit
         # spread_buy_side = spread_market / 2
@@ -412,102 +387,45 @@ class Trader:
         return {"buy_spread": buy_spread, "sell_spread": sell_spread, "spread_market": spread_market}
 
     def get_orders_both_sides_quoted(self, symbol, state, current_pos, position_limit):
-        # This method gets the fair price using vwap method and then computes the spread based on our current position
-
-        # print("Both sides of the market are quoted for " + symbol)
+        
         print("Position on " + symbol + " is: " + str(current_pos))
-        # Initialize the list of Orders to be sent as an empty list
+        
         orders: list[Order] = []
         order_depth: OrderDepth = state.order_depths[symbol]
 
-        GEAR_values = self.get_mid_price("DIVING_GEAR",state)
-        GEAR_value = GEAR_values["mid_price"]
-        best_GEAR_bid = GEAR_values["best_bid"]
-        best_GEAR_ask = GEAR_values["best_ask"]
-        best_GEAR_bid_vol = GEAR_values["best_bid_vol"]
-        best_GEAR_ask_vol = GEAR_values["best_ask_vol"]
-
-        self.Gear_price_history.append(GEAR_value)
-
-        current_dolphins = state.observations["DOLPHIN_SIGHTINGS"]
-        if len(self.dolphin_sightings_history) > 1:
-            previous_dolphins = self.dolphin_sightings_history[-1]
-        else:
-            previous_dolphins = current_dolphins
-        self.dolphin_sightings_history.append(current_dolphins)
-        dolphin_change = current_dolphins-previous_dolphins
-        self.dolphin_change_history.append(dolphin_change)
-        print(self.dolphin_sightings_history[-10:])
-
-        gear_price_series = pd.Series(self.Gear_price_history)
-        ratios_mav5 = gear_price_series.rolling(window=5, center = False).mean()
-        current_ratio = ratios_mav5[-1:]
-
-        if current_dolphins - previous_dolphins > 10:
-            buy_price = best_GEAR_ask
-            buy_volume = best_GEAR_ask_vol
-            orders.append(Order(symbol, buy_price, buy_volume))
-            print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-        if current_dolphins - previous_dolphins < -10:
-            sell_price = best_GEAR_bid
-            sell_volume = best_GEAR_bid_vol
-            orders.append(Order(symbol, sell_price, sell_volume))
-            print("SELL " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-        if current_pos > 0:
-            if GEAR_value < current_ratio:
-                sell_price = best_GEAR_bid
-                sell_volume = best_GEAR_bid_vol
-                orders.append(Order(symbol, sell_price, sell_volume))
-                print("SELL " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-        if current_pos < 0:    
-            if GEAR_value > current_ratio:
-                buy_price = best_GEAR_ask
-                buy_volume = best_GEAR_ask_vol
-                orders.append(Order(symbol, buy_price, buy_volume))
-                print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-
-
-
-
-
-
-
-
-        # # Computing the fair value of the asset based on simple maths
-        # buy_spread = max(order_depth.buy_orders.keys()) - min(order_depth.buy_orders.keys())
-        # sell_spread = max(order_depth.sell_orders.keys()) - min(order_depth.sell_orders.keys())
-        # market_values = self.get_fair_price_asset(symbol, state)
-        # market_spread = market_values["average_spread"]
-
-        # mask_symbol = self.df_data_market["symbol"] == symbol
-        # df_symbol = self.df_data_market[mask_symbol]  
-
-        # if len(df_symbol) >= 10:   
-        #     current_mean = df_symbol['vwap_mean'].tail(1)
-        #     current_mean = current_mean.values[0]
-        #     print(current_mean)
-        #     highest_mean = df_symbol['vwap_mean'].tail(10).max()
-        #     print(highest_mean)
-        #     lowest_mean = df_symbol['vwap_mean'].tail(10).min()
-        #     if highest_mean > current_mean and current_mean> lowest_mean:            
-        #         fair_value_asset = current_mean
-        #     else:
-        #         fair_value_asset = market_values["average_value"]
-        #         if market_spread < buy_spread:
-        #                 fair_value_asset = self.get_alternate_buy_price_asset(symbol, state)
-        #         if market_spread < sell_spread:
-        #                 fair_value_asset = self.get_alternate_sell_price_asset(symbol, state)
-        # else:
-        # fair_value_asset = market_values["average_value"]
-        # if market_spread < buy_spread:
-        #     fair_value_asset = self.get_alternate_buy_price_asset(symbol, state)
-        # if market_spread < sell_spread:
-        #     fair_value_asset = self.get_alternate_sell_price_asset(symbol, state)
         
+        buy_spread = max(order_depth.buy_orders.keys()) - min(order_depth.buy_orders.keys())
+        sell_spread = max(order_depth.sell_orders.keys()) - min(order_depth.sell_orders.keys())
+        
+        market_values = self.get_fair_price_asset(symbol, state)
+        market_spread = market_values["average_spread"]
+        fair_value_asset = market_values["average_value"]
+        if market_spread < buy_spread:
+            fair_value_asset = self.get_alternate_buy_price_asset(symbol, state)
+        if market_spread < sell_spread:
+            fair_value_asset = self.get_alternate_sell_price_asset(symbol, state)
+
+        #--- Compute the Reservation Price ---#
+        gamma = 0.1 # Inventory risk aversion parameter
+        kappa = 0.5 # Order book liquidity parameter
+        T = 1.0 # Closing time (conveniently normalized to 1)
+        current_time = state.timestamp 
+        closing_time = 999900
+
+        t = current_time / closing_time # Current time as a fraction of the closing time
+        inventory = current_pos # Quantity of assets in inventory of base asset (could be positive/negative for long/short positions)
+
+        log_returns = np.log(fair_value_asset)
+        std_log_returns = log_returns.std()
+        volatility = std_log_returns # Market volatility
+        mid_price = fair_value_asset # Current market mid price
+
+        # Compute the Reservation Price
+        reservation_price = mid_price - inventory * gamma * volatility**2 * (T - t)
+        delta = kappa * reservation_price
+
+        optimal_bid_spread = delta
+        optimal_ask_spread = delta
 
         # print("The estimated fair price for " + symbol + " is: " + str(fair_value_asset))
 
@@ -516,119 +434,67 @@ class Trader:
         # buy_spread = spreads["buy_spread"]
         # sell_spread = spreads["sell_spread"]
         # market_spread = spreads["spread_market"]
-        # print("The estimated buy spread for " + symbol + " is: " + str(buy_spread))
-        # print("The estimated sell spread for " + symbol + " is: " + str(sell_spread))
-
-        # # Estimating a profit range limits
-
+        
+        # Estimating a profit range limits
         # fair_buy_price = fair_value_asset - market_spread / 2  # Willing to buy lower than my valuation
         # fair_sell_price = fair_value_asset + market_spread / 2
+        fair_buy_price = reservation_price - market_spread / 2  # Willing to buy lower than my valuation
+        fair_sell_price = reservation_price + market_spread / 2
 
+        total_volume_buy = 0
+        total_volume_buy = sum(
+            value for key, value in order_depth.sell_orders.items() if key < fair_buy_price)
+        # buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if key < fair_buy_price]
+        buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if key < (reservation_price - optimal_bid_spread)]
+        if total_volume_buy != 0:
+            print(str(len(buy_orders_to_place)) + " buy orders to place:")
+            for buy_order_to_place in buy_orders_to_place:
+                buy_price = buy_order_to_place[0]
+                buy_volume = - buy_order_to_place[1]
+                orders.append(Order(symbol, buy_price, buy_volume))
+                print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
 
+        if total_volume_buy == 0 and (current_pos)/position_limit < 0.75:
+            buy_price = mt.floor(fair_value_asset) - 1
+            buy_volume = mt.floor((position_limit - current_pos)/4)
+            orders.append(Order(symbol, buy_price, buy_volume))
+            print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
+
+        # Trying to account for outliers
+        # if sell_spread > market_spread:
+        #     total_volume_buy = sum(
+        #         value for key, value in order_depth.sell_orders.items() if key < (fair_buy_price + buy_spread - market_spread))
+        #     buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if
+        #                         key < (fair_buy_price + sell_spread - market_spread)]
+        #     if total_volume_buy != 0:
+        #         print(str(len(buy_orders_to_place)) + " buy orders to place:")
+        #         for buy_order_to_place in buy_orders_to_place:
+        #             buy_price = buy_order_to_place[0]
+        #             buy_volume = - buy_order_to_place[1]
+        #             orders.append(Order(symbol, buy_price, buy_volume))
+        #         buy_price = max(buy_orders_to_place[0])
+        #         buy_volume = - mt.floor((position_limit - current_pos)/4)
+        #         orders.append(Order(symbol, buy_price, buy_volume))
+
+        total_volume_sell = sum(
+            value for key, value in order_depth.buy_orders.items() if key > fair_sell_price)
+        # sell_orders_to_place = [(key, value) for key, value in order_depth.buy_orders.items() if key > fair_sell_price]
+        sell_orders_to_place = [(key, value) for key, value in order_depth.buy_orders.items() if key > reservation_price + optimal_ask_spread]
+        if total_volume_sell != 0:
+            print(str(len(sell_orders_to_place)) + " sell orders to place:")
+            for sell_order_to_place in sell_orders_to_place:
+                price = sell_order_to_place[0]
+                volume = - sell_order_to_place[1]
+                orders.append(Order(symbol, price, volume))
+                print("SELL " + str(symbol) + " price: ", str(price) + " volume: ", str(volume))
+        if total_volume_sell== 0 and (-current_pos)/position_limit < 0.75:
+                sell_price = mt.ceil(fair_value_asset) + 1
+                sell_volume = - mt.floor((position_limit + current_pos)/4)
+                orders.append(Order(symbol, sell_price, sell_volume))
+                print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
+
+        
             
-
-        # total_volume_buy = 0
-        # total_volume_buy = sum(
-        #     value for key, value in order_depth.sell_orders.items() if key < fair_buy_price)
-        # buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if
-        #                        key < fair_buy_price]
-        # if total_volume_buy != 0:
-        #     print(str(len(buy_orders_to_place)) + " buy orders to place:")
-        #     for buy_order_to_place in buy_orders_to_place:
-        #         buy_price = buy_order_to_place[0]
-        #         buy_volume = - buy_order_to_place[1]
-        #         orders.append(Order(symbol, buy_price, buy_volume))
-        #         print("BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-
-        # # Trying to account for outliers
-        # # if sell_spread > market_spread:
-        # #     total_volume_buy = sum(
-        # #         value for key, value in order_depth.sell_orders.items() if key < (fair_buy_price + buy_spread - market_spread))
-        # #     buy_orders_to_place = [(key, value) for key, value in order_depth.sell_orders.items() if
-        # #                         key < (fair_buy_price + sell_spread - market_spread)]
-        # #     if total_volume_buy != 0:
-        # #         print(str(len(buy_orders_to_place)) + " buy orders to place:")
-        # #         for buy_order_to_place in buy_orders_to_place:
-        # #             buy_price = buy_order_to_place[0]
-        # #             buy_volume = - buy_order_to_place[1]
-        # #             orders.append(Order(symbol, buy_price, buy_volume))
-        # #         buy_price = max(buy_orders_to_place[0])
-        # #         buy_volume = - mt.floor((position_limit - current_pos)/4)
-        # #         orders.append(Order(symbol, buy_price, buy_volume))
-
-        # total_volume_sell = sum(
-        #     value for key, value in order_depth.buy_orders.items() if key > fair_sell_price)
-        # sell_orders_to_place = [(key, value) for key, value in order_depth.buy_orders.items() if
-        #                         key > fair_sell_price]
-        # if total_volume_sell != 0:
-        #     print(str(len(sell_orders_to_place)) + " sell orders to place:")
-        #     for sell_order_to_place in sell_orders_to_place:
-        #         price = sell_order_to_place[0]
-        #         volume = - sell_order_to_place[1]
-        #         orders.append(Order(symbol, price, volume))
-        #         print("SELL " + str(symbol) + " price: ", str(price) + " volume: ", str(volume))
-
-        # # if buy_spread > market_spread:
-        # #     total_volume_sell = sum(
-        # #         value for key, value in order_depth.buy_orders.items() if key > (fair_sell_price - sell_spread + market_spread))
-        # #     sell_orders_to_place = [(key, value) for key, value in order_depth.buy_orders.items() if
-        # #                             key > (fair_sell_price - buy_spread + market_spread)]
-        # #     if total_volume_sell != 0:
-        # #         print(str(len(sell_orders_to_place)) + " sell orders to place:")
-        # #         for sell_order_to_place in sell_orders_to_place:
-        # #             price = sell_order_to_place[0]
-        # #             volume = - sell_order_to_place[1]
-        # #             orders.append(Order(symbol, price, volume))
-
-        # #         sell_price = min(sell_orders_to_place[0])
-        # #         sell_volume = - mt.floor((position_limit - current_pos)/4)
-        # #         orders.append(Order(symbol, sell_price, sell_volume))
-        # # if total_volume_sell == 0 and current_pos > 0:
-        # #         sell_price = mt.ceil(fair_value_asset)
-        # #         sell_volume = -current_pos
-        # #         orders.append(Order(symbol, sell_price, sell_volume))   
-        # #         print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-        # if symbol == 'PERLS':
-
-        #     if (position_limit + current_pos > 5):
-        #         sell_price = mt.ceil(fair_value_asset) + 1
-        #         sell_volume = - mt.floor((position_limit + current_pos))
-        #         orders.append(Order(symbol, sell_price, sell_volume))
-        #         orders.append(Order(symbol, sell_price, sell_volume))
-        #         print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-        # else:
-        #     if (-current_pos)/position_limit < 0.75 and market_spread > 2:
-        #         sell_price = mt.ceil(fair_value_asset)+ mt.ceil(market_spread/3)
-        #         sell_volume = - mt.floor((position_limit + current_pos)/6)
-        #         orders.append(Order(symbol, sell_price, sell_volume))
-        #         print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-        #     # sell_price = mt.ceil(fair_value_asset) + 2
-        #     # sell_volume = - mt.floor((position_limit + current_pos)/8)
-        #     # orders.append(Order(symbol, sell_price, sell_volume))
-        #     # print("Trying to SELL " + str(symbol) + " price: ", str(sell_price) + " volume: ", str(sell_volume))
-        # # if total_volume_buy == 0 and current_pos < 0:
-        # #         buy_price = mt.floor(fair_value_asset)
-        # #         buy_volume = -current_pos
-        # #         orders.append(Order(symbol, buy_price, buy_volume))   
-        # #         print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-        # if symbol == 'PERLS':
-        #     if (position_limit - current_pos > 5):
-        #         buy_price = mt.floor(fair_value_asset) - 1
-        #         buy_volume = mt.floor((position_limit - current_pos))
-        #         orders.append(Order(symbol, buy_price, buy_volume))
-        #         print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-    
-        # else:
-        #     if (current_pos)/position_limit < 0.75 and market_spread > 2:
-        #         buy_price = mt.floor(fair_value_asset) - mt.ceil(market_spread/3)
-        #         buy_volume = mt.floor((position_limit - current_pos)/6)
-        #         orders.append(Order(symbol, buy_price, buy_volume))
-        #         print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
-    
-            # buy_price = mt.floor(fair_value_asset) - 2
-            # buy_volume = mt.floor((position_limit-current_pos)/8)
-            # orders.append(Order(symbol, buy_price, buy_volume))
-            # print("Trying to BUY " + str(symbol) + " price: ", str(buy_price) + " volume: ", str(buy_volume))
         return orders
 
     # def get_orders_buy_side_quoted_only(self, symbol, state, current_pos, position_limit):
