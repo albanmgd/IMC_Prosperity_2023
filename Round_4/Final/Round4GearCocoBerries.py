@@ -462,8 +462,8 @@ class Trader:
         fair_buy_price = fair_value_asset - market_spread / 2  # Willing to buy lower than my valuation
         fair_sell_price = fair_value_asset + market_spread / 2
 
-        lower_limit = 1.8721
-        upper_limit = 1.8809
+        lower_limit = 1.8724
+        upper_limit = 1.8801
         sigma = 0.001
         fair_limit = 1.8762
         inner_upper_limit = fair_limit + sigma
@@ -781,10 +781,10 @@ class Trader:
                 orders_berries.append(Order("BERRIES", bid_price_1, - max_volume_per_order))
 
             # FINALLY looking to unload the short position
-        if 700000 <= state.timestamp <= 1000000:
+        if 600000 <= state.timestamp <= 1000000:
             # if 100000 < state.timestamp < 350000:
             if (state.timestamp <= 775000) or (state.timestamp >= 825000):  # 350k timestamps to buy back 230 position
-                if (state.timestamp % 1000) == 0:  # leaves 0 opened in the end
+                if (state.timestamp % 1400) == 0:  # leaves 0 opened in the end
                     # Best ask; we want to be filled at the lowest available price
                     ask_price_1 = min(order_book_berries.sell_orders.keys())
                     # ask_volume_1 = order_book_berries.sell_orders.get(ask_price_1)
