@@ -781,10 +781,10 @@ class Trader:
                 orders_berries.append(Order("BERRIES", bid_price_1, - max_volume_per_order))
 
             # FINALLY looking to unload the short position
-        if 600000 <= state.timestamp <= 1000000:
+        if 700000 <= state.timestamp <= 1000000:
             # if 100000 < state.timestamp < 350000:
             if (state.timestamp <= 775000) or (state.timestamp >= 825000):  # 350k timestamps to buy back 230 position
-                if (state.timestamp % 1400) == 0:  # leaves 0 opened in the end
+                if (state.timestamp % 1000) == 0:  # leaves 0 opened in the end
                     # Best ask; we want to be filled at the lowest available price
                     ask_price_1 = min(order_book_berries.sell_orders.keys())
                     # ask_volume_1 = order_book_berries.sell_orders.get(ask_price_1)
