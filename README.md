@@ -26,6 +26,12 @@ Repo to share our views, ideas and much more on algos related to the Prosperity 
 
 # Round 3
 # Round 4
+![image](https://user-images.githubusercontent.com/90888090/228443443-84781e6d-29d7-4aee-aab3-1904256ffd35.png)
+
+![image](https://user-images.githubusercontent.com/90888090/228443508-3b478be4-8705-4934-b8d7-e49cee51de16.png)
+
+![image](https://user-images.githubusercontent.com/90888090/228443719-66071c39-49e2-493f-8de6-f8ea57274023.png)
+
 # Round 5
 
 
